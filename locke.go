@@ -31,6 +31,7 @@ var (
 	newKeyName       = flag.String("new-key", "", "create a new key (input value is key name)")
 	targetKeyName    = flag.String("key", "", "key to use for locking/unlocking")
 	openFlag         = flag.Bool("open", false, "unlock all files in this directory recursively")
+	forever          = flag.Bool("forever", false, "unlock a file and remove from unlocked files list in .locke")
 )
 
 func main() {
@@ -80,7 +81,7 @@ func main() {
 		fmt.Printf("created key %s", *newKeyName)
 
 	case *unlockFilepath != "":
-		unlockSingleFile(cfg, *unlockFilepath)
+		unlockSingleFile(cfg, *unlockFilepath, *forever)
 
 	case *openFlag:
 		openCommand(cfg)
@@ -106,7 +107,7 @@ func main() {
 	}
 }
 
-func unlockSingleFile(cfg *LockeConfiguration, relativeFilePath string) {
+func unlockSingleFile(cfg *LockeConfiguration, relativeFilePath string, forever bool) {
 	file := filepath.Join(pwd, relativeFilePath)
 	bytes := must(os.ReadFile(file))
 	if !containsLockeSignature(bytes) {
@@ -116,6 +117,9 @@ func unlockSingleFile(cfg *LockeConfiguration, relativeFilePath string) {
 	lf := fromJson[*LockedFile](bytes)
 	key := cfg.getKey(lf.KeyName)
 	uf := unlockFile(file, lf, key)
+	if forever {
+		return
+	}
 	cfg.UnlockedFiles = append(cfg.UnlockedFiles, uf)
 	WriteJsonFile(lockeDotFile, cfg)
 }
