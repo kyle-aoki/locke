@@ -88,7 +88,7 @@ func main() {
 
 	case *targetKeyName == "" && len(os.Args[1:]) > 0:
 		for _, arg := range os.Args[1:] {
-			unlockSingleFile(cfg, arg)
+			unlockSingleFile(cfg, arg, false)
 		}
 
 	case len(os.Args[1:]) == 0:
@@ -108,15 +108,14 @@ func main() {
 }
 
 func unlockSingleFile(cfg *LockeConfiguration, relativeFilePath string, forever bool) {
-	file := filepath.Join(pwd, relativeFilePath)
-	bytes := must(os.ReadFile(file))
+	bytes := must(os.ReadFile(relativeFilePath))
 	if !containsLockeSignature(bytes) {
-		fmt.Printf("not a locked file: %s\n", file)
+		fmt.Printf("not a locked file: %s\n", relativeFilePath)
 		os.Exit(1)
 	}
 	lf := fromJson[*LockedFile](bytes)
 	key := cfg.getKey(lf.KeyName)
-	uf := unlockFile(file, lf, key)
+	uf := unlockFile(relativeFilePath, lf, key)
 	if forever {
 		return
 	}
