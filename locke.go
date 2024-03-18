@@ -12,6 +12,7 @@ import (
 )
 
 const (
+	programVersion   = "0.2.0"
 	lockeDotFileName = ".locke"
 	filePermissions  = 0660
 	lockeFileSuffix  = "lockefile"
@@ -25,6 +26,7 @@ var (
 )
 
 var (
+	version          = flag.Bool("v", false, "print version")
 	initLockeDotFile = flag.Bool("init", false, "create ~/.locke configuration file")
 	lockFilepath     = flag.String("lock", "", "lock a specified file")
 	unlockFilepath   = flag.String("unlock", "", "unlock a specified file")
@@ -36,6 +38,11 @@ var (
 
 func main() {
 	flag.Parse()
+
+	if *version {
+		fmt.Println(programVersion)
+		os.Exit(0)
+	}
 
 	if *initLockeDotFile {
 		lockeCfg := &LockeConfiguration{
@@ -68,6 +75,7 @@ func main() {
 		}
 		key := cfg.getKey(*targetKeyName)
 		file := filepath.Join(pwd, *lockFilepath)
+
 		lockFile(file, key)
 		cfg.UnlockedFiles = filter(cfg.UnlockedFiles, func(uf *UnlockedFile) bool { return uf.Path == file })
 		WriteJsonFile(lockeDotFile, cfg)
@@ -107,15 +115,18 @@ func main() {
 	}
 }
 
-func unlockSingleFile(cfg *LockeConfiguration, relativeFilePath string, forever bool) {
-	bytes := must(os.ReadFile(relativeFilePath))
+func unlockSingleFile(cfg *LockeConfiguration, path string, forever bool) {
+	if !filepath.IsAbs(path) {
+		path = filepath.Join(pwd, path)
+	}
+	bytes := must(os.ReadFile(path))
 	if !containsLockeSignature(bytes) {
-		fmt.Printf("not a locked file: %s\n", relativeFilePath)
+		fmt.Printf("not a locked file: %s\n", path)
 		os.Exit(1)
 	}
 	lf := fromJson[*LockedFile](bytes)
 	key := cfg.getKey(lf.KeyName)
-	uf := unlockFile(relativeFilePath, lf, key)
+	uf := unlockFile(path, lf, key)
 	if forever {
 		return
 	}
