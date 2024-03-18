@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"os"
 )
 
@@ -46,4 +47,13 @@ func filter[T any](ts []T, fn func(t T) bool) []T {
 		}
 	}
 	return newTs
+}
+
+func fileExists(file string) bool {
+	_, err := os.Stat(file)
+	if errors.Is(err, os.ErrNotExist) {
+		return false
+	}
+	check(err)
+	return true
 }

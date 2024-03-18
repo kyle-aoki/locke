@@ -1,7 +1,6 @@
 package main
 
 import (
-	"errors"
 	"flag"
 	"fmt"
 	"io/fs"
@@ -56,12 +55,10 @@ func main() {
 		os.Exit(0)
 	}
 
-	_, err := os.Stat(lockeDotFile)
-	if errors.Is(err, os.ErrNotExist) {
+	if !fileExists(lockeDotFile) {
 		fmt.Println("run locke --init to create a config file at ~/.locke")
 		os.Exit(1)
 	}
-	check(err)
 
 	cfgFileBytes := must(os.ReadFile(lockeDotFile))
 	cfg := fromJson[*LockeConfiguration](cfgFileBytes)
@@ -101,6 +98,11 @@ func main() {
 
 	case len(os.Args[1:]) == 0:
 		for _, uf := range cfg.UnlockedFiles {
+			if !fileExists(uf.Path) {
+				cfg.UnlockedFiles = filter(cfg.UnlockedFiles, func(unlockedFile *UnlockedFile) bool { return unlockedFile.Path == uf.Path })
+				WriteJsonFile(lockeDotFile, cfg)
+				continue
+			}
 			key := cfg.getKey(uf.KeyName)
 			lockFile(uf.Path, key)
 		}
